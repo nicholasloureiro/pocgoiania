@@ -231,7 +231,7 @@ def render_overview_tab():
     
     st.markdown("""
     <div class="story-box">
-    <strong>Assistente IA OpenAI para Análise de Dados:</strong> Faça perguntas em português sobre os dados 
+    <strong>Assistente IA para Análise de Dados:</strong> Faça perguntas em português sobre os dados 
     da Unimed.
     </div>
     """, unsafe_allow_html=True)
@@ -270,8 +270,8 @@ def render_overview_tab():
                 
                 # Clear messages button in sidebar
                 st.markdown("---")
-                st.markdown("### 🧹 Controles do Chat")
-                if st.button("🗑️ Limpar Conversas", type="secondary", use_container_width=True):
+                st.markdown("### Controles do Chat")
+                if st.button(" Limpar Conversas", type="secondary", use_container_width=True):
                     if "openai_chat_messages" in st.session_state:
                         del st.session_state["openai_chat_messages"]
                     if "openai_dataframes" in st.session_state:
@@ -347,7 +347,7 @@ def render_overview_tab():
         # Set up memory
         msgs = StreamlitChatMessageHistory(key="openai_chat_messages")
         if len(msgs.messages) == 0:
-            msgs.add_ai_message("Olá! 👋 Sou seu assistente GPT para análise de dados da Unimed. Posso ajudá-lo a criar consultas SQL e analisar padrões de fraude. Como posso ajudar?")
+            msgs.add_ai_message("Olá! Sou seu assistente para análise de dados da Unimed. Posso ajudá-lo a criar consultas SQL e analisar padrões de fraude. Como posso ajudar?")
         
         # Initialize dataframe storage
         if "openai_dataframes" not in st.session_state:
@@ -722,9 +722,13 @@ def render_divergencias_tab():
     
     st.markdown("""
     <div class="story-box">
-    <strong>O Problema:</strong> O SGU (sistema de faturamento) registra procedimentos executados que não aparecem 
-    como atendidos no PEP (sistema de agendamentos). Isso pode indicar faturamento de procedimentos não realizados, 
-    falhas de integração ou inconsistências nos registros.
+    <strong>O Problema:</strong> O SGU (Sistema de Gestão Unimed) registra procedimentos faturados que não aparecem como atendidos no PEP (Prontuário Eletrônico do Paciente). Esse descompasso pode indicar:
+
+            - Faturamento de procedimentos não realizados;
+
+            - Falhas na integração entre os sistemas;
+
+            - Inconsistências nos registros administrativoclinicos.
     </div>
     """, unsafe_allow_html=True)
     
@@ -820,17 +824,21 @@ def render_divergencias_tab():
         valor_total = df_divergencias['valor'].sum()
         casos_criticos = len(df_divergencias[df_divergencias['situacao'] == 'EXECUTADO_SGU_NAO_ATENDIDO_PEP'])
         
-        col1, col2, col3 = st.columns(3)
+        col0, col1, col2, col3 = st.columns(4)
         
+        with col0:
+            st.metric("Atendimentos Totais",6.769)
+
         with col1:
-            valor_formatado = f"R$ {valor_total:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-            st.metric("Valor Total", valor_formatado)
+            st.metric("Casos Críticos", f"{casos_criticos:,}".replace(',', '.'))
+        
 
         with col2:
             st.metric("Total de Casos", f"{len(df_divergencias):,}".replace(',', '.'))
         with col3:
-            st.metric("Casos Críticos", f"{casos_criticos:,}".replace(',', '.'))
-        
+            valor_formatado = f"R$ {valor_total:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+            st.metric("Valor Total", valor_formatado)
+           
         # Análise por tipo
         col1, col2 = st.columns([2, 1])
         
@@ -1038,7 +1046,7 @@ def render_intervalos_tab():
     
     st.markdown("""
     <div class="story-box">
-    <strong>Tempo é Dinheiro:</strong> Intervalos muito curtos entre atendimentos (< 30 minutos) podem indicar 
+    <strong>Tempo é Dinheiro:</strong> Intervalos muito curtos entre inícios de atendimentos (< 30 minutos) podem indicar 
     consultas superficiais, registros fictícios ou tentativas de maximizar faturamento sem qualidade adequada.
     </div>
     """, unsafe_allow_html=True)
@@ -1114,7 +1122,7 @@ def render_intervalos_tab():
                         'SUSPEITO': '#f59e0b',
                         'QUESTIONÁVEL': '#eab308'
                     },
-                    title="Distribuição dos Intervalos entre Atendimentos por Profissional",
+                    title="Distribuição dos Intervalos entre inícios de Atendimentos por Profissional",
                     labels={"intervalo_minutos": "Intervalo (minutos)"}
                 )
                 fig_box.update_xaxes(tickangle=45)
@@ -1929,7 +1937,10 @@ def render_pacientes_tab():
     specialty_gender = df_population.groupby(['especialidade_principal', 'genero']).size().reset_index(name='count')
     top_specialties = df_population['especialidade_principal'].value_counts().head(10).index
     specialty_gender_filtered = specialty_gender[specialty_gender['especialidade_principal'].isin(top_specialties)]
-    
+
+    # Order by total counts - create the same order as value_counts()
+    specialty_order = df_population['especialidade_principal'].value_counts().head(10).index.tolist()
+
     fig_specialty_gender = px.bar(
         specialty_gender_filtered,
         x='especialidade_principal',
@@ -1940,11 +1951,11 @@ def render_pacientes_tab():
             'feminino': '#ff69b4',
             'masculino': '#4169e1',
             'desconhecido': '#808080'
-        }
+        },
+        category_orders={'especialidade_principal': specialty_order}  # Add this line
     )
     fig_specialty_gender.update_layout(xaxis_tickangle=-45)
     st.plotly_chart(fig_specialty_gender, use_container_width=True)
-
     #aqui
     # Add this section after the "Análise por Especialidade e Gênero" section in render_pacientes_tab()
 
@@ -2319,15 +2330,15 @@ def main():
     
     # Sistema de abas
     tabs = st.tabs([
-        "Visão Geral", 
+        "Perfil de Pacientes", 
         "Divergências SGU/PEP", 
         "Conflitos de Horário", 
         "Intervalos Suspeitos", 
         "Análise de No-Show", 
-        "Perfil de Pacientes"
+        "Análise com IA"
     ])
     
-    with tabs[0]:
+    with tabs[5]:
         render_overview_tab()
     
     with tabs[1]:
@@ -2342,7 +2353,7 @@ def main():
     with tabs[4]:
         render_noshow_tab()
     
-    with tabs[5]:
+    with tabs[0]:
         render_pacientes_tab()
 
 if __name__ == "__main__":
